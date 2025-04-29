@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.8'  # Set the Python version you want to use
+        python-version: '3.10'  # Set the Python version you want to use
 
     - name: Install dependencies
       run: |
@@ -24,12 +24,12 @@ jobs:
 
     - name: Run the script to get TPE data
       run: |
-        python your_script.py  # Replace with the name of your script that fetches TPE data
+        python fetch_tpe_data.py  # The script that fetches TPE data
 
     - name: Commit and push the results (if new data is generated)
       run: |
-        git config --global user.email "your-email@example.com"
-        git config --global user.name "Your GitHub Username"
+        git config user.name "weirdllama2"
+        git config user.email "weirdllama2@users.noreply.github.com"
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings"
         git push https://github.com/${{ github.repository }}.git "refs/heads/${{ github.ref }}" --force
