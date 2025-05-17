@@ -33,5 +33,3 @@ jobs:
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings" || echo "No changes to commit"
         git push https://weirdllama2:${{ secrets.ACTIONS_PUSH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
-      env:
-        ACTIONS_PUSH_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
