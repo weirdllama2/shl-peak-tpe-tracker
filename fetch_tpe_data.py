@@ -14,15 +14,19 @@ def get_all_tpeevents():
         return []
 
 def get_peak_tpe(pid):
-    """Fetch peak TPE timeline for a player by pid."""
-    url = f"{API_URL}/tpeevents/timeline?pid={pid}&peak=true"
+    """Fetch the peak TPE for a player by their ID."""
+    url = f"{API_URL}/tpe/timeline?pid={pid}&peak=true"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        if data:
-            # Extract max 'tpe' from timeline entries
-            return max(entry.get('tpe', 0) for entry in data)
+        if isinstance(data, list) and data:
+            return max(entry.get('tpe', 0) for entry in data if isinstance(entry, dict))
+        else:
+            print(f"No TPE data for pid {pid}: {data}")
+    else:
+        print(f"Failed to fetch TPE timeline for pid {pid}, status: {response.status_code}")
     return None
+
 
 def fetch_and_rank_players():
     """Process TPE events to find players with TPE >= 1800 and get their peak TPE."""
