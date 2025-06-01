@@ -2,8 +2,8 @@ name: Update Peak TPE Rankings
 
 on:
   schedule:
-    - cron: '0 0 * * SUN'  # Every Sunday at midnight UTC
-  workflow_dispatch:        # Allows manual run from GitHub UI
+    - cron: '0 0 * * SUN'  # Runs every Sunday at midnight UTC
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
 
 jobs:
   update_rankings:
@@ -26,20 +26,13 @@ jobs:
       run: |
         python fetch_tpe_data.py
 
-    - name: Echo Token Prefix (for debug)
-      run: |
-        echo "Token prefix: ${TOKEN}" | cut -c1-5
-      env:
-        TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
-
-    - name: Debug Git Remote
-      run: git remote -v
-
     - name: Commit and push results
+      env:
+        ACTIONS_PUSH_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
       run: |
-        git config user.name "weirdllama2"
-        git config user.email "weirdllama2@users.noreply.github.com"
-        git remote set-url origin https://weirdllama2:${{ secrets.ACTIONS_PUSH_TOKEN }}@github.com/${{ github.repository }}
+        git config --global user.name "weirdllama2"
+        git config --global user.email "weirdllama2@users.noreply.github.com"
+        git remote set-url origin https://weirdllama2:${ACTIONS_PUSH_TOKEN}@github.com/${{ github.repository }}
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings" || echo "No changes to commit"
         git push origin HEAD:main
