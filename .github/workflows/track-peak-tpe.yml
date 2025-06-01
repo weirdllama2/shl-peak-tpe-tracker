@@ -24,24 +24,22 @@ jobs:
     - name: Run the script to get TPE data
       run: python fetch_tpe_data.py
 
-    - name: Show Git remote for debugging
-      run: git remote -v
+    - name: Setup SSH for GitHub
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ACTIONS_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        eval "$(ssh-agent -s)"
+        ssh-add ~/.ssh/id_ed25519
+
+    - name: Change git remote to SSH
+      run: git remote set-url origin git@github.com:weirdllama2/shl-peak-tpe-tracker.git
 
     - name: Commit and push results
-      env:
-        ACTIONS_PUSH_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
       run: |
-        git config --global user.name "weirdllama2"
-        git config --global user.email "weirdllama2@users.noreply.github.com"
-
-        # Set authenticated remote
-        git remote set-url origin https://weirdllama2:${ACTIONS_PUSH_TOKEN}@github.com/${{ github.repository }}
-
-        echo "🔒 Using remote URL:"
-        git remote -v
-
+        git config user.name "weirdllama2"
+        git config user.email "weirdllama2@users.noreply.github.com"
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings" || echo "No changes to commit"
-
-        echo "🚀 Attempting to push..."
-        git push origin HEAD:main || echo "❌ Push failed"
+        git push origin HEAD:main
