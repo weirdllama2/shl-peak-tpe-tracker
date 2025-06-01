@@ -20,18 +20,18 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt  # Make sure you have a requirements.txt for dependencies
+        pip install -r requirements.txt 
 
     - name: Run the script to get TPE data
       run: |
-        python fetch_tpe_data.py  # The script that fetches TPE data
+        python fetch_tpe_data.py  
 
-    - name: Commit and push changes
+    - name: Commit and push results
+      env:
+        ACTIONS_PUSH_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
       run: |
         git config user.name "weirdllama2"
         git config user.email "weirdllama2@users.noreply.github.com"
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings" || echo "No changes to commit"
-        git push origin main
-      env:
-       GITHUB_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
+        git push https://weirdllama2:${ACTIONS_PUSH_TOKEN}@github.com/weirdllama2/shl-peak-tpe-tracker.git HEAD:main
