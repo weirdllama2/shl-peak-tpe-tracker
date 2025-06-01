@@ -2,8 +2,8 @@ name: Update Peak TPE Rankings
 
 on:
   schedule:
-    - cron: '0 0 * * SUN'  # This runs the action every Sunday at midnight UTC
-  workflow_dispatch:  # This allows you to trigger the action manually from the Actions tab
+    - cron: '0 0 * * SUN'  # Every Sunday at midnight UTC
+  workflow_dispatch:        # Allows manual run from GitHub UI
 
 jobs:
   update_rankings:
@@ -16,23 +16,30 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.10'  # Set the Python version you want to use
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt 
+        pip install -r requirements.txt
 
     - name: Run the script to get TPE data
       run: |
-        python fetch_tpe_data.py  
+        python fetch_tpe_data.py
+
+    - name: Echo Token Prefix (for debug)
+      run: |
+        echo "Token prefix: ${TOKEN}" | cut -c1-5
+      env:
+        TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
+
+    - name: Debug Git Remote
+      run: git remote -v
 
     - name: Commit and push results
-      env:
-        ACTIONS_PUSH_TOKEN: ${{ secrets.ACTIONS_PUSH_TOKEN }}
       run: |
         git config user.name "weirdllama2"
         git config user.email "weirdllama2@users.noreply.github.com"
-        git remote set-url origin https://weirdllama2:${ACTIONS_PUSH_TOKEN}@github.com/weirdllama2/shl-peak-tpe-tracker.git
+        git remote set-url origin https://weirdllama2:${{ secrets.ACTIONS_PUSH_TOKEN }}@github.com/${{ github.repository }}
         git add peak_tpe_rankings.csv
         git commit -m "Update peak TPE rankings" || echo "No changes to commit"
         git push origin HEAD:main
