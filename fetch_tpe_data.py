@@ -19,11 +19,8 @@ def get_peak_tpe(pid):
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        if data:
-            # Find max 'tpe' in the timeline entries
-            return max(entry.get('tpe', 0) for entry in data)
-        else:
-            return None
+        tpe_values = [entry['tpe'] for entry in data if isinstance(entry.get('tpe'), int)]
+        return max(tpe_values) if tpe_values else None
     else:
         print(f"Failed to fetch TPE timeline for pid {pid}, status: {response.status_code}")
         return None
@@ -34,28 +31,37 @@ def fetch_and_rank_players():
 
     ranked_players = []
     for player in players:
-        tpe = player.get('totalTPE', 0)
         pid = player.get('pid')
-        if tpe >= 1800 and pid:
-            peak_tpe = get_peak_tpe(pid)
-            if peak_tpe is not None:
-                ranked_players.append({
-                    'name': player.get('name', 'Unknown'),
-                    'pid': pid,
-                    'peakTPE': peak_tpe
-                })
-            else:
-                print(f"No timeline data for pid {pid}")
-            time.sleep(0.5)  # reduce rate to be polite
+        name = player.get('name', 'Unknown')
+        draft_season = player.get('draftSeason', 'Unknown')
+
+        if not pid:
+            continue
+
+        peak_tpe = get_peak_tpe(pid)
+        if peak_tpe is not None:
+            ranked_players.append({
+                'name': name,
+                'pid': pid,
+                'draftSeason': draft_season,
+                'peakTPE': peak_tpe
+            })
+        else:
+            print(f"No valid TPE data for {name} (pid {pid})")
+
+        time.sleep(0.5)  # To avoid hitting API too hard
+
+    # Sort players by peak TPE descending
     ranked_players.sort(key=lambda x: x['peakTPE'], reverse=True)
 
-    with open(OUTPUT_FILE, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['name', 'pid', 'peakTPE'])
+    # Write to CSV
+    with open(OUTPUT_FILE, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=['name', 'pid', 'draftSeason', 'peakTPE'])
         writer.writeheader()
         for p in ranked_players:
             writer.writerow(p)
 
-    print(f"Data saved to {OUTPUT_FILE}")
+    print(f"Saved {len(ranked_players)} ranked players to {OUTPUT_FILE}")
 
 if __name__ == '__main__':
     fetch_and_rank_players()
