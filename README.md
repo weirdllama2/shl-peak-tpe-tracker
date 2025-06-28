@@ -14,5 +14,5 @@ This project fetches the peak TPE for SHL players using the Simulation Hockey Le
     python peak_tpe_tracker.py
     ```
 
-Output is saved in `/data/peak_tpe_records.csv`.
+Output is saved in `peak_tpe_records.csv`.
 
