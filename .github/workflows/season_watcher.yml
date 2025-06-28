@@ -1,0 +1,23 @@
+name: Season Watcher
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # every day at noon UTC
+
+jobs:
+  check-season:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install requests
+        run: pip install requests
+      - name: Run season watcher
+        id: watcher
+        run: |
+          python season_watcher.py
+          # exit code 0 means no new season
+          # exit code 1 means new season found
