@@ -1,45 +1,32 @@
-name: Update Peak TPE Rankings
+name: Track Peak TPE
 
 on:
-  schedule:
-    - cron: '0 0 * * SUN'  # Runs every Sunday at midnight UTC
-  workflow_dispatch:
+  workflow_dispatch:    # manual trigger
+  repository_dispatch:  # triggered by another workflow (season watcher)
 
 jobs:
-  update_rankings:
+  fetch_and_update:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout the code
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.10'
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install requests
 
-    - name: Run the script to get TPE data
-      run: python fetch_tpe_data.py
+      - name: Run Peak TPE Fetch Script
+        run: python fetch_peak_tpe.py
 
-    - name: Setup SSH for GitHub
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.ACTIONS_SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan github.com >> ~/.ssh/known_hosts
-        eval "$(ssh-agent -s)"
-        ssh-add ~/.ssh/id_ed25519
-
-    - name: Change git remote to SSH
-      run: git remote set-url origin git@github.com:weirdllama2/shl-peak-tpe-tracker.git
-
-    - name: Commit and push results
-      run: |
-        git config user.name "weirdllama2"
-        git config user.email "weirdllama2@users.noreply.github.com"
-        git add peak_tpe_rankings.csv
-        git commit -m "Update peak TPE rankings" || echo "No changes to commit"
-        git push origin HEAD:main
+      - name: Commit updated CSV files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add peak_tpe_rankings.csv peak_tpe_rankings_previous.csv
+          git commit -m "Update peak TPE rankings [ci skip]" || echo "No changes to commit"
+          git push
