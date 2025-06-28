@@ -1,76 +1,82 @@
-import json
-import os
-import time
 import requests
-from config import API_URL, OUTPUT_FILE
+import csv
+import time
+import os
 
-CACHE_FILE = 'peak_tpe_cache.json'
+API_BASE = "https://portal.simulationhockey.com/api/v1"
 
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_cache(cache):
-    with open(CACHE_FILE, 'w') as f:
-        json.dump(cache, f)
-
-def get_players():
-    players_url = f"{API_URL}/player"
-    response = requests.get(players_url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error fetching players: Status {response.status_code}")
-        return []
+def fetch_all_players():
+    url = f"{API_BASE}/player"
+    print("Fetching player list...")
+    res = requests.get(url)
+    res.raise_for_status()
+    return res.json()
 
 def get_peak_tpe(pid):
-    url = f"{API_URL}/tpeevents/timeline?pid={pid}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        if data:
-            return max(entry.get('tpe', 0) for entry in data)
-    print(f"No valid TPE data for pid {pid}")
-    return None
+    url = f"{API_BASE}/player/peak-tpe?pid={pid}"
+    res = requests.get(url)
+    if res.status_code != 200:
+        return None
+    return res.json().get("peakTpe")
 
-def fetch_and_rank_players():
-    cache = load_cache()
-    players = get_players()
-    print(f"Fetched {len(players)} players.")
+def load_previous_data(filename):
+    if not os.path.exists(filename):
+        return {}
+    with open(filename, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        return {row['pid']: int(row['peakTPE']) for row in reader}
 
-    ranked_players = []
-    for player in players:
-        pid = str(player.get('pid'))
-        tpe = player.get('totalTPE', 0)
-        if tpe >= 1800:
-            if pid in cache:
-                peak_tpe = cache[pid]
-            else:
-                peak_tpe = get_peak_tpe(pid)
-                if peak_tpe is not None:
-                    cache[pid] = peak_tpe
-                else:
-                    continue
-            ranked_players.append({
-                'name': player.get('name', 'Unknown'),
-                'pid': pid,
-                'peakTPE': peak_tpe
-            })
-            time.sleep(0.5)  # polite delay
-
-    ranked_players.sort(key=lambda x: x['peakTPE'], reverse=True)
-
-    with open(OUTPUT_FILE, 'w', newline='') as file:
-        import csv
-        writer = csv.DictWriter(file, fieldnames=['name', 'pid', 'peakTPE'])
+def save_current_data(players, filename):
+    with open(filename, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=["name", "pid", "peakTPE", "change"])
         writer.writeheader()
-        for p in ranked_players:
-            writer.writerow(p)
+        for player in players:
+            writer.writerow(player)
 
-    save_cache(cache)
-    print(f"Data saved to {OUTPUT_FILE}")
+def main():
+    previous_file = "peak_tpe_rankings_previous.csv"
+    output_file = "peak_tpe_rankings.csv"
 
-if __name__ == '__main__':
-    fetch_and_rank_players()
+    players = fetch_all_players()
+    peak_data = []
+
+    print(f"Checking {len(players)} players...")
+    for i, player in enumerate(players):
+        pid = str(player["id"])
+        name = player["name"]
+        peak = get_peak_tpe(pid)
+        if peak and peak >= 2000:
+            peak_data.append({"name": name, "pid": pid, "peakTPE": peak})
+        time.sleep(0.2)  # Prevent hammering API
+        if i % 100 == 0 and i != 0:
+            print(f"...{i} players processed")
+
+    print(f"Found {len(peak_data)} players with ≥2000 peak TPE")
+
+    # Sort new data by peakTPE descending
+    peak_data.sort(key=lambda x: -x["peakTPE"])
+
+    # Load previous data
+    previous = load_previous_data(previous_file)
+    prev_ranks = {pid: rank for rank, (pid, _) in enumerate(
+        sorted(previous.items(), key=lambda x: -x[1]), start=1)}
+
+    # Add change info
+    for rank, player in enumerate(peak_data, start=1):
+        pid = player["pid"]
+        if pid not in previous:
+            player["change"] = "NEW"
+        else:
+            prev_rank = prev_ranks.get(pid)
+            if prev_rank and prev_rank > rank:
+                player["change"] = f"↑{prev_rank - rank}"
+            else:
+                player["change"] = ""
+
+    # Save updated data
+    save_current_data(peak_data, output_file)
+    print(f"✅ Saved {len(peak_data)} players to {output_file}")
+    print("📌 Previous file management is handled automatically by CI.")
+
+if __name__ == "__main__":
+    main()
