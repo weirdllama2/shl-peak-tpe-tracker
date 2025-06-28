@@ -22,7 +22,7 @@ jobs:
         run: pip install requests
 
       - name: Run peak TPE script
-        run: python3 fetch_peak_tpe.py
+        run: python3 fetch_tpe_data.py
 
       - name: Commit and push changes
         run: |
