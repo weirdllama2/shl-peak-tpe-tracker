@@ -24,7 +24,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run the script to update peak TPE rankings
-        run: python fetch_type_data.py  # Make sure this matches the filename in your repo
+        run: python fetch_tpe_data.py  
 
       - name: Setup SSH for GitHub
         run: |
