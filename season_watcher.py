@@ -28,7 +28,7 @@ def fetch_latest_offseason():
     soup = BeautifulSoup(resp.text, 'html.parser')
 
     # Find all thread titles in announcements
-    titles = soup.find_all('a', text=OFFSEASON_PATTERN)
+    titles = soup.find_all('a', string=OFFSEASON_PATTERN)
     if not titles:
         return None, None
 
