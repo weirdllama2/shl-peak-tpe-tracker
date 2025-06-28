@@ -3,7 +3,7 @@ name: Season Watcher
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * *"  # Every day at 12:00 UTC
+    - cron: "0 12 * * *"  # Daily at 12:00 UTC
 
 jobs:
   check-season:
@@ -23,3 +23,11 @@ jobs:
 
       - name: Run season watcher script
         run: python3 season_watcher.py
+
+      - name: Trigger Peak TPE Tracker
+        if: success() && env.NEW_SEASON_FOUND == 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Track Peak TPE
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
