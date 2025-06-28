@@ -1,10 +1,22 @@
-import requests
-import csv
+import json
+import os
 import time
+import requests
 from config import API_URL, OUTPUT_FILE
 
+CACHE_FILE = 'peak_tpe_cache.json'
+
+def load_cache():
+    if os.path.exists(CACHE_FILE):
+        with open(CACHE_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache):
+    with open(CACHE_FILE, 'w') as f:
+        json.dump(cache, f)
+
 def get_players():
-    """Fetch all players from /player endpoint."""
     players_url = f"{API_URL}/player"
     response = requests.get(players_url)
     if response.status_code == 200:
@@ -14,54 +26,51 @@ def get_players():
         return []
 
 def get_peak_tpe(pid):
-    """Fetch the TPE timeline for a player and return peak TPE."""
     url = f"{API_URL}/tpeevents/timeline?pid={pid}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        tpe_values = [entry['tpe'] for entry in data if isinstance(entry.get('tpe'), int)]
-        return max(tpe_values) if tpe_values else None
-    else:
-        print(f"Failed to fetch TPE timeline for pid {pid}, status: {response.status_code}")
-        return None
+        if data:
+            return max(entry.get('tpe', 0) for entry in data)
+    print(f"No valid TPE data for pid {pid}")
+    return None
 
 def fetch_and_rank_players():
+    cache = load_cache()
     players = get_players()
     print(f"Fetched {len(players)} players.")
 
     ranked_players = []
     for player in players:
-        pid = player.get('pid')
-        name = player.get('name', 'Unknown')
-        draft_season = player.get('draftSeason', 'Unknown')
-
-        if not pid:
-            continue
-
-        peak_tpe = get_peak_tpe(pid)
-        if peak_tpe is not None:
+        pid = str(player.get('pid'))
+        tpe = player.get('totalTPE', 0)
+        if tpe >= 1800:
+            if pid in cache:
+                peak_tpe = cache[pid]
+            else:
+                peak_tpe = get_peak_tpe(pid)
+                if peak_tpe is not None:
+                    cache[pid] = peak_tpe
+                else:
+                    continue
             ranked_players.append({
-                'name': name,
+                'name': player.get('name', 'Unknown'),
                 'pid': pid,
-                'draftSeason': draft_season,
                 'peakTPE': peak_tpe
             })
-        else:
-            print(f"No valid TPE data for {name} (pid {pid})")
+            time.sleep(0.5)  # polite delay
 
-        time.sleep(0.5)  # To avoid hitting API too hard
-
-    # Sort players by peak TPE descending
     ranked_players.sort(key=lambda x: x['peakTPE'], reverse=True)
 
-    # Write to CSV
-    with open(OUTPUT_FILE, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=['name', 'pid', 'draftSeason', 'peakTPE'])
+    with open(OUTPUT_FILE, 'w', newline='') as file:
+        import csv
+        writer = csv.DictWriter(file, fieldnames=['name', 'pid', 'peakTPE'])
         writer.writeheader()
         for p in ranked_players:
             writer.writerow(p)
 
-    print(f"Saved {len(ranked_players)} ranked players to {OUTPUT_FILE}")
+    save_cache(cache)
+    print(f"Data saved to {OUTPUT_FILE}")
 
 if __name__ == '__main__':
     fetch_and_rank_players()
