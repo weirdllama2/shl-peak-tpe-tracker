@@ -42,7 +42,7 @@ def main():
 
     print(f"Checking {len(players)} players...")
     for i, player in enumerate(players):
-        pid = str(player["id"])
+        pid = str(player["pid"])
         name = player["name"]
         peak = get_peak_tpe(pid)
         if peak and peak >= 2000:
