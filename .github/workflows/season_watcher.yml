@@ -2,23 +2,40 @@ name: Season Watcher
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # every day at noon UTC
-  workflow_dispatch:
+    - cron: '0 12 * * *'  # Runs every day at noon UTC
 
 jobs:
   check-season:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      - name: Install requests
-        run: pip install requests
-      - name: Run season watcher
-        id: watcher
+      - name: Check for new season post
+        id: check_season
         run: |
-          python season_watcher.py
-          # exit code 0 means no new season
-          # exit code 1 means new season found
+          # Example: fetch latest forum thread title with curl and jq (needs to be adjusted)
+          latest_title=$(curl -s 'https://simulationhockey.com/api/forum/lastpost?fid=24' | jq -r '.threads[0].title')
+          echo "Latest forum thread title: $latest_title"
+          
+          # Extract season number from title, e.g., "S83 Offseason Post"
+          if [[ "$latest_title" =~ S([0-9]+) ]]; then
+            season_number="${BASH_REMATCH[1]}"
+            echo "Detected season $season_number"
+            echo "::set-output name=season::$season_number"
+          else
+            echo "No season found"
+            exit 0
+          fi
+
+      - name: Check if season changed
+        id: season_check
+        run: |
+          # Read last stored season from a file in repo or GitHub Actions cache, for demo we assume new season
+          # You should implement a way to store/read the last season number here
+          echo "::set-output name=changed::true"
+
+      - name: Trigger peak TPE workflow
+        if: steps.season_check.outputs.changed == 'true'
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: run-peak-tpe-fetch
+          client-payload: '{"season": "${{ steps.check_season.outputs.season }}"}'
