@@ -24,11 +24,19 @@ jobs:
       - name: Run peak TPE script
         run: python3 fetch_tpe_data.py
 
+      - name: Rename current output as previous
+        run: |
+          if [ -f peak_tpe_rankings.csv ]; then
+            mv peak_tpe_rankings.csv peak_tpe_rankings_previous.csv
+          else
+            echo "No new output file found"
+          fi
+
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add peak_tpe_rankings.csv peak_tpe_rankings_previous.csv || true
+          git add peak_tpe_rankings_previous.csv || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
