@@ -3,6 +3,7 @@ name: Season Watcher
 on:
   schedule:
     - cron: '0 12 * * *'  # every day at noon UTC
+  workflow_dispatch:
 
 jobs:
   check-season:
