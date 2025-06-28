@@ -21,7 +21,7 @@ jobs:
           if [ -f peak_tpe_rankings.csv ]; then
             mv peak_tpe_rankings.csv peak_tpe_rankings_previous.csv
           else
-            echo "No new output file found"
+            echo "No current CSV file to rename."
           fi
 
       - name: Set up Python
@@ -41,7 +41,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add peak_tpe_rankings.csv peak_tpe_rankings_previous.csv || true
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "✅ No changes to commit."
           else
             git commit -m "🔄 Update peak TPE rankings"
             git push
